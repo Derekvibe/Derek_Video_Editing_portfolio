@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emmanuel Okoro — AI Video Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #1e1e1e;
+    --accent: #e8f000;
+    --accent2: #ff4d00;
+    --text: #f0ede6;
+    --muted: #5a5a5a;
+    --mid: #2a2a2a;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed; width: 10px; height: 10px;
+    background: var(--accent); border-radius: 50%;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s;
+  }
+  .cursor-ring {
+    position: fixed; width: 36px; height: 36px;
+    border: 1px solid rgba(232,240,0,0.4); border-radius: 50%;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.18s ease, width 0.3s, height 0.3s, border-color 0.3s;
+  }
+  body:hover .cursor-ring { opacity: 1; }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 9997;
+  }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 20px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 100;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  nav.scrolled {
+    background: rgba(10,10,10,0.92);
+    border-color: var(--border);
+    backdrop-filter: blur(16px);
+  }
+  .nav-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 300;
+    color: var(--accent); letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 36px; }
+  .nav-links a {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+    text-decoration: none; transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    position: relative;
+    padding: 120px 48px 80px;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 70% 40%, rgba(232,240,0,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 20% 80%, rgba(255,77,0,0.05) 0%, transparent 60%);
+  }
+
+  .hero-tape {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent2) 0%, var(--accent) 50%, var(--accent2) 100%);
+    animation: tape 3s ease infinite alternate;
+  }
+  @keyframes tape { from { opacity: 0.5; } to { opacity: 1; } }
+
+  .hero-inner {
+    max-width: 1100px; width: 100%;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 60px; align-items: end;
+    position: relative; z-index: 2;
+  }
+
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--border); border: 1px solid var(--mid);
+    padding: 6px 14px; border-radius: 2px;
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    color: var(--accent); letter-spacing: 0.1em;
+    margin-bottom: 28px;
+  }
+  .hero-tag::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    animation: blink 1.2s step-end infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(52px, 7vw, 96px);
+    line-height: 0.96;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 24px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 15px; color: var(--muted);
+    max-width: 480px; line-height: 1.7;
+    font-weight: 400; margin-bottom: 40px;
+  }
+
+  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--accent); color: #0a0a0a;
+    padding: 14px 28px; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    text-decoration: none; border: none; cursor: none;
+    transition: background 0.2s, transform 0.2s;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  .btn-primary:hover { background: #fff; transform: translate(-2px, -2px); }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1px solid var(--mid); color: var(--muted);
+    padding: 14px 28px; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    text-decoration: none; cursor: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+  .hero-stats {
+    display: flex; flex-direction: column; gap: 24px;
+    border-left: 1px solid var(--border); padding-left: 40px;
+    align-self: center;
+  }
+  .stat-item { text-align: right; }
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 40px; line-height: 1;
+    color: var(--accent);
+    display: block;
+  }
+  .stat-label {
+    font-size: 11px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  /* Scrolling ticker */
+  .ticker-wrap {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0; overflow: hidden;
+    background: var(--surface);
+  }
+  .ticker {
+    display: flex; gap: 0;
+    animation: ticker 22s linear infinite;
+    white-space: nowrap;
+  }
+  .ticker-item {
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 0 40px;
+  }
+  .ticker-item span { color: var(--accent); margin-right: 40px; }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* Sections */
+  section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--accent2);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(36px, 4vw, 56px);
+    line-height: 1.05; letter-spacing: -0.01em;
+    margin-bottom: 60px;
+  }
+
+  /* About */
+  .about-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 80px; align-items: start;
+  }
+  .about-body p {
+    font-size: 16px; line-height: 1.8; color: rgba(240,237,230,0.7);
+    margin-bottom: 20px;
+  }
+  .about-body p strong { color: var(--text); font-weight: 600; }
+
+  .about-tools { display: flex; flex-direction: column; gap: 16px; }
+  .tool-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    position: relative; overflow: hidden;
+  }
+  .tool-row::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--accent);
+    opacity: 0.06;
+    width: var(--fill, 0%);
+  }
+  .tool-name {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .tool-level {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+  .tool-bar {
+    position: absolute; right: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+
+  /* Work Experience */
+  .exp-grid { display: flex; flex-direction: column; gap: 2px; }
+  .exp-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 36px 40px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .exp-card:hover { border-color: var(--mid); }
+  .exp-card::after {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--accent2);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .exp-card:hover::after { opacity: 1; }
+
+  .exp-header {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .exp-role {
+    font-size: 20px; font-weight: 700; letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .exp-company { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .exp-period {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--accent);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    white-space: nowrap;
+    background: rgba(232,240,0,0.06);
+    padding: 4px 10px; border: 1px solid rgba(232,240,0,0.15);
+  }
+  .exp-bullets { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .exp-bullets li {
+    font-size: 14px; color: rgba(240,237,230,0.65); line-height: 1.65;
+    padding-left: 18px; position: relative;
+  }
+  .exp-bullets li::before {
+    content: '→'; position: absolute; left: 0;
+    color: var(--accent2); font-size: 12px;
+  }
+
+  /* Projects */
+  .projects-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+  .project-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 40px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+    cursor: none;
+  }
+  .project-card:hover { border-color: var(--mid); transform: translate(-2px, -2px); }
+  .project-card.featured {
+    grid-column: span 2;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: center;
+  }
+  .project-card.featured .proj-visual {
+    height: 280px;
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1200 100%);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 80px; position: relative; overflow: hidden;
+    order: 2;
+  }
+  .project-card.featured .proj-visual::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(232,240,0,0.08) 0%, transparent 70%);
+  }
+
+  .proj-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--accent2);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .proj-title {
+    font-size: 22px; font-weight: 700; margin-bottom: 14px;
+    letter-spacing: -0.01em; line-height: 1.2;
+  }
+  .proj-desc {
+    font-size: 14px; color: rgba(240,237,230,0.6); line-height: 1.7;
+    margin-bottom: 24px;
+  }
+  .proj-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    padding: 4px 12px;
+    border: 1px solid var(--mid);
+    color: var(--muted); letter-spacing: 0.08em;
+  }
+
+  .proj-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--accent); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    text-decoration: none; margin-top: 20px;
+    transition: gap 0.2s;
+  }
+  .proj-link:hover { gap: 14px; }
+
+  /* Platforms */
+  .platforms-row {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 2px; margin-top: 0;
+  }
+  .platform-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 40px 32px; text-align: center;
+    transition: border-color 0.3s;
+  }
+  .platform-card:hover { border-color: var(--mid); }
+  .platform-icon { font-size: 36px; margin-bottom: 16px; display: block; }
+  .platform-name {
+    font-size: 16px; font-weight: 700; margin-bottom: 8px;
+    letter-spacing: 0.03em;
+  }
+  .platform-desc {
+    font-size: 13px; color: var(--muted); line-height: 1.6;
+  }
+  .platform-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    text-decoration: none; margin-top: 16px;
+    letter-spacing: 0.08em;
+    transition: gap 0.2s;
+  }
+  .platform-link:hover { gap: 10px; }
+
+  /* Contact */
+  .contact-block {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 72px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .contact-block::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(232,240,0,0.04) 0%, transparent 70%);
+  }
+  .contact-block .section-title { margin-bottom: 16px; }
+  .contact-sub {
+    font-size: 16px; color: var(--muted); max-width: 500px;
+    margin: 0 auto 40px; line-height: 1.7;
+  }
+  .contact-email {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(18px, 2.5vw, 28px);
+    color: var(--accent); text-decoration: none;
+    letter-spacing: -0.01em;
+    display: block; margin-bottom: 40px;
+    transition: color 0.2s;
+  }
+  .contact-email:hover { color: var(--text); }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 28px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+  }
+
+  /* Animations */
+  .fade-up {
+    opacity: 0; transform: translateY(30px);
+    animation: fadeUp 0.7s ease forwards;
+  }
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .delay-1 { animation-delay: 0.15s; }
+  .delay-2 { animation-delay: 0.3s; }
+  .delay-3 { animation-delay: 0.45s; }
+  .delay-4 { animation-delay: 0.6s; }
+
+  /* Divider */
+  .divider {
+    border: none; border-top: 1px solid var(--border);
+    margin: 0 48px;
+  }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .hero { padding: 100px 24px 60px; }
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-stats { border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 32px; flex-direction: row; flex-wrap: wrap; gap: 32px; }
+    .stat-item { text-align: left; }
+    section { padding: 70px 24px; }
+    .about-grid { grid-template-columns: 1fr; gap: 48px; }
+    .projects-grid { grid-template-columns: 1fr; }
+    .project-card.featured { grid-column: span 1; grid-template-columns: 1fr; }
+    .project-card.featured .proj-visual { order: -1; height: 200px; }
+    .platforms-row { grid-template-columns: 1fr; }
+    .contact-block { padding: 48px 28px; }
+    footer { flex-direction: column; gap: 12px; text-align: center; }
+    .divider { margin: 0 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav id="nav">
+  <div class="nav-logo">MY Portfolio</div>
+  <div class="nav-links">
+    <a href="#about">About</a>
+    <a href="#work">Work</a>
+    <a href="#projects">Platforms</a>
+    <a href="#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" style="max-width:100%; padding-top:120px;">
+  <div class="hero-bg"></div>
+  <div class="hero-tape"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-tag fade-up">AI Video Editor &nbsp;·&nbsp; Content Strategist</div>
+      <h1 class="fade-up delay-1">
+        Okoro<br>
+        <em>Emmanuel</em> Nzube<br>
+        <em></em>Derek</em>
+      </h1>
+      <p class="hero-sub fade-up delay-2">
+        I build video content that converts — from scripting to AI-assisted editing to final export.
+        Based in Lagos. Fluent in CapCut, DaVinci, Premiere Pro and the AI tools that make production faster without making it look like it.
+      </p>
+      <div class="hero-actions fade-up delay-3">
+        <a href="#contact" class="btn-primary">Hire Me ↗</a>
+        <a href="https://vt.tiktok.com/ZSHfFwLcY/" target="_blank" class="btn-ghost">Watch My Work</a>
+      </div>
+    </div>
+    <div class="hero-stats fade-up delay-4">
+      <div class="stat-item">
+        <span class="stat-num">1,500+</span>
+        <span class="stat-label">Views, Single Upload</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">20%</span>
+        <span class="stat-label">Content Clarity Lift</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">10+</span>
+        <span class="stat-label">Subs from One Video</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ticker -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <div class="ticker-item"><span>✦</span> AI-Assisted Editing</div>
+    <div class="ticker-item"><span>✦</span> CapCut Advanced</div>
+    <div class="ticker-item"><span>✦</span> DaVinci Resolve</div>
+    <div class="ticker-item"><span>✦</span> Adobe Premiere Pro</div>
+    <div class="ticker-item"><span>✦</span> Scriptwriting</div>
+    <div class="ticker-item"><span>✦</span> Thumbnail Design</div>
+    <div class="ticker-item"><span>✦</span> YouTube SEO</div>
+    <div class="ticker-item"><span>✦</span> TikTok Strategy</div>
+    <div class="ticker-item"><span>✦</span> Runway / HeyGen</div>
+    <div class="ticker-item"><span>✦</span> Canva Advanced</div>
+    <!-- Duplicate for seamless loop -->
+    <div class="ticker-item"><span>✦</span> AI-Assisted Editing</div>
+    <div class="ticker-item"><span>✦</span> CapCut Advanced</div>
+    <div class="ticker-item"><span>✦</span> DaVinci Resolve</div>
+    <div class="ticker-item"><span>✦</span> Adobe Premiere Pro</div>
+    <div class="ticker-item"><span>✦</span> Scriptwriting</div>
+    <div class="ticker-item"><span>✦</span> Thumbnail Design</div>
+    <div class="ticker-item"><span>✦</span> YouTube SEO</div>
+    <div class="ticker-item"><span>✦</span> TikTok Strategy</div>
+    <div class="ticker-item"><span>✦</span> Runway / HeyGen</div>
+    <div class="ticker-item"><span>✦</span> Canva Advanced</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-label">/ 01 — About</div>
+  <h2 class="section-title">Video that earns<br>its runtime.</h2>
+  <div class="about-grid">
+    <div class="about-body">
+      <p>
+        I am a video editor and content strategist based in Lagos, Nigeria. My background is technical — B.Eng in Chemical Engineering — which means I think in systems, not just aesthetics. Every cut has a reason. Every frame earns its place.
+      </p>
+      <p>
+        I work across <strong>short-form and long-form</strong> — YouTube deep-dives, TikTok hooks, brand explainers, and B2B product content. At Biofil Technologies I built their full video content workflow from scratch: from diagnosing why their uploads looked degraded, to fixing the compression pipeline, to writing the framework their team uses today.
+      </p>
+      <p>
+        I use <strong>AI tools actively and deliberately</strong> — not to replace craft, but to do in two hours what used to take six. Runway for generative B-roll, CapCut AI for speed edits, HeyGen for video avatars, and GitHub Copilot when the project crosses into code.
+      </p>
+      <p>
+        I also run my own YouTube channel as a live experiment — testing hooks, A/B-ing thumbnails, reading retention graphs and iterating. The 1,500+ views on a single upload came from doing that work properly.
+      </p>
+    </div>
+    <div class="about-tools">
+      <style>
+        .tool-row[data-fill="95"] { --fill: 95%; }
+        .tool-row[data-fill="90"] { --fill: 90%; }
+        .tool-row[data-fill="85"] { --fill: 85%; }
+        .tool-row[data-fill="75"] { --fill: 75%; }
+        .tool-row[data-fill="60"] { --fill: 60%; }
+        .tool-row[data-fill="50"] { --fill: 50%; }
+      </style>
+      <div class="tool-row" data-fill="95"><span class="tool-name">CapCut</span><span class="tool-level">Advanced</span><div class="tool-bar"></div></div>
+      <div class="tool-row" data-fill="90"><span class="tool-name">Canva</span><span class="tool-level">Advanced</span><div class="tool-bar"></div></div>
+      <div class="tool-row" data-fill="85"><span class="tool-name">DaVinci Resolve</span><span class="tool-level">Intermediate</span><div class="tool-bar"></div></div>
+      <div class="tool-row" data-fill="85"><span class="tool-name">Adobe Premiere Pro</span><span class="tool-level">Intermediate</span><div class="tool-bar"></div></div>
+      <div class="tool-row" data-fill="75"><span class="tool-name">After Effects</span><span class="tool-level">Basic Motion</span><div class="tool-bar"></div></div>
+      <div class="tool-row" data-fill="90"><span class="tool-name">YouTube Studio</span><span class="tool-level">Analytics & SEO</span><div class="tool-bar"></div></div>
+      <div class="tool-row" data-fill="70"><span class="tool-name">Runway / HeyGen</span><span class="tool-level">AI Generation</span><div class="tool-bar"></div></div>
+      <div class="tool-row" data-fill="60"><span class="tool-name">Scriptwriting</span><span class="tool-level">Hooks & Storyboards</span><div class="tool-bar"></div></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- WORK EXPERIENCE -->
+<section id="work">
+  <div class="section-label">/ 02 — Experience</div>
+  <h2 class="section-title">Where the work<br>actually happened.</h2>
+  <div class="exp-grid">
+
+    <div class="exp-card">
+      <div class="exp-header">
+        <div>
+          <div class="exp-role">Digital Content & IT Coordinator</div>
+          <div class="exp-company">Biofil Technologies Nigeria Limited (NYSC)</div>
+        </div>
+        <div class="exp-period">2025 — 2026</div>
+      </div>
+      <ul class="exp-bullets">
+        <li>Built and maintained a full video content library translating complex B2B energy and biofuel products into clear, viewer-ready formats — measurably improving content clarity by 10–20% through structured scripting and intentional visual sequencing.</li>
+        <li>Diagnosed recurring video quality degradation across published assets; designed and implemented a standardised upload workflow covering compression settings, resolution standards and platform formatting that resolved the issue completely.</li>
+        <li>Introduced new content styles and creative direction across the company's digital channels, contributing to an estimated 5% engagement increase on published posts.</li>
+        <li>Provided internal training to stakeholders on video production standards — resolution, file compression, platform-specific specs — reducing post-production rework and upskilling the team permanently.</li>
+        <li>Developed a repeatable content framework for translating complex technical concepts into accessible visual narratives, creating a reusable asset now used for future brand campaigns.</li>
+      </ul>
+    </div>
+
+    <div class="exp-card">
+      <div class="exp-header">
+        <div>
+          <div class="exp-role">Independent Creator & Channel Manager</div>
+          <div class="exp-company">Personal YouTube Channel — Developer Content</div>
+        </div>
+        <div class="exp-period">Ongoing</div>
+      </div>
+      <ul class="exp-bullets">
+        <li>Owns the full production pipeline solo — ideation, scripting, filming, editing, thumbnail design, SEO titling and scheduling — with no team or budget behind it.</li>
+        <li>Generated 1,500+ views on a single upload through deliberate hook construction, thumbnail click-optimisation and content packaging that converts impressions to watches.</li>
+        <li>Built 10+ new subscribers from a single video — a retention signal that the content compels people to want more, not just to click once.</li>
+        <li>Uses YouTube Analytics (CTR, watch time, drop-off maps) to inform every subsequent video, treating the channel as a live testing environment for content strategy.</li>
+        <li>Applies AI tools — CapCut AI, generative B-roll, automated captions — to compress production time without compromising output quality.</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- PLATFORMS -->
+<section id="projects">
+  <div class="section-label">/ 03 — Live Work</div>
+  <h2 class="section-title">See the work<br>running.</h2>
+  <div class="platforms-row">
+
+    <div class="platform-card">
+      <span class="platform-icon">▶</span>
+      <div class="platform-name">YouTube</div>
+      <div class="platform-desc">
+        Developer content. Educational long-form. 1,500+ views from a single upload with 10+ subscriber conversions.
+        Built, filmed and edited solo.
+      </div>
+      <a href="https://www.youtube.com/@Pro_Reverb" target="_blank" class="platform-link">Visit Channel →</a>
+    </div>
+
+    <div class="platform-card">
+      <span class="platform-icon">♪</span>
+      <div class="platform-name">TikTok</div>
+      <div class="platform-desc">
+        Short-form content. Fast-cut editing. Platform-native hooks designed for the 3-second retention window that decides everything.
+      </div>
+      <a href="https://vt.tiktok.com/ZSHfFwLcY/" target="_blank" class="platform-link">View Profile →</a>
+    </div>
+
+    <div class="platform-card">
+      <span class="platform-icon">✍</span>
+      <div class="platform-name">freeCodeCamp</div>
+      <div class="platform-desc">
+        Technical writing for one of the world's largest developer platforms. Millions of monthly readers. Long-form editorial work that explains complex systems clearly.
+      </div>
+      <a href="https://www.freecodecamp.org/news/author/derek/" target="_blank" class="platform-link">Read Articles →</a>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- CONTACT -->
+<section id="contact" style="padding-bottom: 0;">
+  <div class="contact-block">
+    <div class="section-label" style="text-align:center; margin-bottom:16px;">/ 04 — Contact</div>
+    <h2 class="section-title" style="text-align:center;">Ready when you are.</h2>
+    <p class="contact-sub">
+      If you need video content that is scripted properly, edited cleanly and built to perform — send a message.
+      I respond fast and I know what "fast turnaround" actually means.
+    </p>
+    <a class="contact-email" href="mailto:emmanuelnzubeokoro@gmail.com">emmanuelnzubeokoro@gmail.com</a>
+    <div class="hero-actions" style="justify-content:center;">
+      <a href="mailto:emmanuelnzubeokoro@gmail.com" class="btn-primary">Send a Message ↗</a>
+      <a href="https://vt.tiktok.com/ZSHfFwLcY/" target="_blank" class="btn-ghost">Watch TikTok</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>© 2026 Okoro Emmanuel Nzube</span>
+  <span>Lagos, Nigeria — Available for remote work</span>
+  <span>+234 915 956 1268</span>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  function animCursor() {
+    cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+    rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+    ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+    requestAnimationFrame(animCursor);
+  }
+  animCursor();
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '16px'; cursor.style.height = '16px';
+      ring.style.width = '52px'; ring.style.height = '52px';
+      ring.style.borderColor = 'rgba(232,240,0,0.7)';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '10px'; cursor.style.height = '10px';
+      ring.style.width = '36px'; ring.style.height = '36px';
+      ring.style.borderColor = 'rgba(232,240,0,0.4)';
+    });
+  });
+
+  // Nav scroll
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // Intersection observer for fade-up on non-hero elements
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.exp-card, .platform-card, .about-grid > *, .tool-row').forEach((el, i) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = `opacity 0.6s ease ${i * 0.06}s, transform 0.6s ease ${i * 0.06}s`;
+    obs.observe(el);
+  });
+</script>
+</body>
+</html>
