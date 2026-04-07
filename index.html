@@ -108,7 +108,15 @@
   .view-hidden {
     display: none;
     opacity: 0;
-    transform: translateY(20px);
+    transform: scale(0.98) translateY(10px);
+  }
+  .view-active {
+    display: block;
+    animation: viewIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes viewIn {
+    from { opacity: 0; transform: scale(0.98) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
   /* Graphics Section */
@@ -165,6 +173,35 @@
   }
   .lightbox-info { margin-top: 20px; text-align: center; }
   .lightbox-title { font-size: 20px; font-weight: 700; color: var(--accent); }
+  
+  .lightbox-loader {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: lbox-spin 0.8s linear infinite;
+    display: none; z-index: 9999;
+  }
+  @keyframes lbox-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  .lightbox.loading .lightbox-loader { display: block; }
+  .lightbox.loading img { opacity: 0; }
+  .lightbox img { transition: opacity 0.3s ease; }
+
+  .lightbox-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 60px; height: 60px; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: none; font-size: 24px; transition: all 0.2s;
+    user-select: none; z-index: 10001;
+  }
+  .lightbox-nav:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+  .lightbox-prev { left: -80px; }
+  .lightbox-next { right: -80px; }
+
+  @media (max-width: 1200px) {
+    .lightbox-prev { left: 10px; }
+    .lightbox-next { right: 10px; }
+  }
 
   .hero-tape {
     position: absolute; top: 0; left: 0; right: 0;
@@ -512,18 +549,54 @@
     letter-spacing: 0.08em;
   }
 
-  /* Animations */
-  .fade-up {
-    opacity: 0; transform: translateY(30px);
-    animation: fadeUp 0.7s ease forwards;
+  /* Form Styles */
+  .contact-form {
+    max-width: 600px; margin: 48px auto 0; text-align: left;
+    display: grid; gap: 24px; position: relative;
   }
-  @keyframes fadeUp {
-    to { opacity: 1; transform: translateY(0); }
+  .form-group { position: relative; }
+  .form-input {
+    width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    padding: 16px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 14px;
+    transition: border-color 0.3s, background 0.3s; outline: none;
   }
-  .delay-1 { animation-delay: 0.15s; }
-  .delay-2 { animation-delay: 0.3s; }
-  .delay-3 { animation-delay: 0.45s; }
-  .delay-4 { animation-delay: 0.6s; }
+  .form-input:focus { border-color: var(--accent); background: rgba(255,255,255,0.06); }
+  .form-label {
+    display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  select.form-input { appearance: none; cursor: pointer; }
+  
+  .form-submit {
+    width: 100%; padding: 18px; background: var(--accent); color: #000;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    border: none; cursor: none; transition: transform 0.2s, background 0.2s;
+    font-family: 'Syne', sans-serif;
+  }
+  .form-submit:hover { background: #fff; transform: translateY(-2px); }
+  
+  .form-success {
+    position: absolute; inset: 0; background: var(--surface);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 10; border: 1px solid var(--accent);
+  }
+  .form-success.active { display: flex; animation: fadeIn 0.4s ease; }
+  
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* New Graphics Sections */
+  .graphics-extra { margin-top: 100px; border-top: 1px solid var(--border); padding-top: 100px; }
+  .stack-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-top: 48px; }
+  .stack-card { 
+    background: var(--surface); border: 1px solid var(--border); padding: 32px; 
+    transition: border-color 0.3s;
+  }
+  .stack-card:hover { border-color: var(--accent); }
+  .stack-icon { font-size: 24px; margin-bottom: 16px; display: block; }
+  .stack-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stack-desc { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
 
   /* Divider */
   .divider {
@@ -568,7 +641,7 @@
   </div>
 </section>
 
-<div id="video-view">
+<div id="video-view" class="view-active">
 <!-- HERO -->
 <section class="hero" style="max-width:100%; padding-top:120px;">
   <div class="hero-bg"></div>
@@ -775,12 +848,61 @@
     <div class="graphics-grid" id="graphics-grid">
       <!-- Graphics items will be generated by JS -->
     </div>
+    <div class="graphics-extra">
+      <div class="section-label">/ 06 — Design Stack</div>
+      <h2 class="section-title">Tools of the<br>visual trade.</h2>
+      <div class="stack-grid">
+        <div class="stack-card fade-up">
+          <span class="stack-icon">Ps</span>
+          <div class="stack-title">Adobe Photoshop</div>
+          <div class="stack-desc">Advanced image manipulation and digital compositing for complex visual assets.</div>
+        </div>
+        <div class="stack-card fade-up">
+          <span class="stack-icon">Ai</span>
+          <div class="stack-title">Adobe Illustrator</div>
+          <div class="stack-desc">Vector-based design for scalable logos and brand identity systems.</div>
+        </div>
+        <div class="stack-card fade-up">
+          <span class="stack-icon">Cv</span>
+          <div class="stack-title">Canva Pro</div>
+          <div class="stack-desc">Rapid design prototyping and social-first content layouts for high turnaround.</div>
+        </div>
+        <div class="stack-card fade-up">
+          <span class="stack-icon">Hg</span>
+          <div class="stack-title">AI Generative Tools</div>
+          <div class="stack-desc">Using Midjourney and DALL-E for unique textures and visual starting points.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="graphics-extra" style="border-top: none; padding-top: 60px; margin-top: 60px;">
+      <div class="section-label">/ 07 — Creative Philosophy</div>
+      <div class="about-grid">
+        <div class="about-body">
+          <p>
+            Design isn't just about "looking good" — it's about <strong>visual communication</strong>. Whether it's a book cover that must tell a story in three seconds or a brand identity that needs to feel trustworthy, I focus on the psychology of the viewer.
+          </p>
+          <p>
+            My background in engineering gives me a structured approach to design systems. I don't just pick colors; I build palettes that evoke specific emotions. I don't just place text; I establish clear visual hierarchies that guide the eye to the most important message.
+          </p>
+        </div>
+        <div>
+           <div class="platform-card" style="text-align: left; background: var(--border); border-color: var(--mid);">
+             <div class="platform-name" style="color: var(--accent);">Visual Strategy</div>
+             <p class="platform-desc" style="font-size: 14px;">Every design element must serve a purpose. If it doesn't add to the message, it's noise.</p>
+           </div>
+        </div>
+      </div>
+    </div>
   </section>
 </div>
 
 <div class="lightbox" id="lightbox">
+  <div class="lightbox-loader"></div>
   <div class="lightbox-content">
     <span class="lightbox-close" id="lightbox-close">CLOSE ×</span>
+    <div class="lightbox-nav lightbox-prev" id="lbox-prev">←</div>
+    <div class="lightbox-nav lightbox-next" id="lbox-next">→</div>
     <img src="" alt="" id="lightbox-img">
     <div class="lightbox-info">
       <div class="lightbox-title" id="lightbox-title"></div>
@@ -797,14 +919,41 @@
     <div class="section-label" style="text-align:center; margin-bottom:16px;">/ 04 — Contact</div>
     <h2 class="section-title" style="text-align:center;">Ready when you are.</h2>
     <p class="contact-sub">
-      If you need video content that is scripted properly, edited cleanly and built to perform — send a message.
-      I respond fast and I know what "fast turnaround" actually means.
+      If you need video content that is scripted properly, or design that communicates clearly — send a message.
     </p>
-    <a class="contact-email" href="mailto:emmanuelnzubeokoro@gmail.com">emmanuelnzubeokoro@gmail.com</a>
-    <div class="hero-actions" style="justify-content:center;">
-      <a href="mailto:emmanuelnzubeokoro@gmail.com" class="btn-primary">Send a Message ↗</a>
-      <a href="https://vt.tiktok.com/ZSHfFwLcY/" target="_blank" class="btn-ghost">Watch TikTok</a>
-    </div>
+
+    <form class="contact-form" id="contactForm">
+      <div class="form-success" id="formSuccess">
+        <span style="font-size: 48px; color: var(--accent); margin-bottom: 16px;">✓</span>
+        <h3 class="proj-title">Message Sent!</h3>
+        <p class="contact-sub" style="margin-bottom: 24px;">I'll get back to you within 24 hours.</p>
+        <button type="button" class="btn-ghost" onclick="resetForm()">Send Another</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-input" placeholder="Your name" required id="formName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" placeholder="hello@example.com" required id="formEmail">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Service Required</label>
+        <select class="form-input" id="formService">
+          <option value="video">AI Video Editing</option>
+          <option value="design">Graphics Design</option>
+          <option value="both">Both (Full Package)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Project Details</label>
+        <textarea class="form-input" rows="5" placeholder="Tell me about your project..." required id="formMsg"></textarea>
+      </div>
+      <button type="submit" class="form-submit" id="submitBtn">Send Message ↗</button>
+    </form>
   </div>
 </section>
 
@@ -873,12 +1022,20 @@
     { title: "Blissful Beauty Salon", cat: "normal", img: "https://lh3.googleusercontent.com/d/1DxpM5vGhUodZs9Y0G_MUmEdyNqmIZlHk" },
     { title: "Bulwark Group", cat: "normal", img: "https://lh3.googleusercontent.com/d/1U9xHLys4XKtXhLrZDXFpnh0iJCCVch-D" },
     { title: "CadMaster NG", cat: "normal", img: "https://lh3.googleusercontent.com/d/101RYHit9sxzggYSlA0w78XSJSeOP5hkn" },
-    { title: "FreshHarvest Farms", cat: "normal", img: "https://lh3.googleusercontent.com/d/1IZpY6gF_ogG_pIS_vSvj4CoKBtTz7THj" }, 
+    { title: "FreshHarvest Farms", cat: "normal", img: "https://lh3.googleusercontent.com/d/1IZpY6gF_ogG_pIS_vSvj4CoKBtTz7THj" },
+    { title: "Insight Line", cat: "normal", img: "https://lh3.googleusercontent.com/d/13PNCAUssoNO5Gjvz38xAe6DkVyd5FBBZ" }, // Placeholder ID
+    { title: "Happy New Month", cat: "normal", img: "https://via.placeholder.com/800x1000/111111/e8f000?text=Design+Pending" },
+    { title: "Birthday Sample", cat: "normal", img: "https://via.placeholder.com/800x1000/111111/e8f000?text=Graphic+Design" },
+    { title: "LiquidLogic Main", cat: "normal", img: "https://via.placeholder.com/800x1000/111111/e8f000?text=Brand+Identity" },
     
     // Folder 1: Book Covers
     { title: "111 Book Cover", cat: "book", img: "https://lh3.googleusercontent.com/d/1i_y1KI0kC8QUTx2_njArKwp-RVNGYpT-" },
     { title: "121 Book Cover", cat: "book", img: "https://lh3.googleusercontent.com/d/1j87bfvsouZvD8CV4LdloYmAVgkZadTZK" },
-    { title: "A Dentist Tale", cat: "book", img: "https://lh3.googleusercontent.com/d/13PNCAUssoNO5Gjvz38xAe6DkVyd5FBBZ" }
+    { title: "A Dentist Tale", cat: "book", img: "https://lh3.googleusercontent.com/d/13PNCAUssoNO5Gjvz38xAe6DkVyd5FBBZ" },
+    { title: "Betwix 2 Shore", cat: "book", img: "https://via.placeholder.com/800x1000/111111/ff4d00?text=Book+Cover" },
+    { title: "Dead Rain", cat: "book", img: "https://via.placeholder.com/800x1000/111111/ff4d00?text=Book+Cover" },
+    { title: "Caregivers", cat: "book", img: "https://via.placeholder.com/800x1000/111111/ff4d00?text=Book+Cover" },
+    { title: "A5 Version 2", cat: "book", img: "https://via.placeholder.com/800x1000/111111/ff4d00?text=Book+Cover" }
   ];
 
   const grid = document.getElementById('graphics-grid');
@@ -888,11 +1045,14 @@
   const lightBoxCat = document.getElementById('lightbox-cat');
   const lightBoxClose = document.getElementById('lightbox-close');
 
+  let currentItemIndex = 0;
+  let currentFilteredData = [];
+
   function renderGraphics(filter = 'all') {
     grid.innerHTML = '';
-    const filtered = filter === 'all' ? graphicsData : graphicsData.filter(d => d.cat === filter);
+    currentFilteredData = filter === 'all' ? graphicsData : graphicsData.filter(d => d.cat === filter);
     
-    filtered.forEach(item => {
+    currentFilteredData.forEach((item, index) => {
       const div = document.createElement('div');
       div.className = `graphic-item fade-up`;
       div.innerHTML = `
@@ -902,19 +1062,43 @@
           <div class="graphic-cat">${item.cat === 'book' ? 'Book Cover' : 'Brand Identity'}</div>
         </div>
       `;
-      div.onclick = () => openLightbox(item);
+      div.onclick = () => openLightbox(index);
       grid.appendChild(div);
       obs.observe(div);
     });
   }
 
-  function openLightbox(item) {
+  function openLightbox(index) {
+    currentItemIndex = index;
+    const item = currentFilteredData[index];
+    lightBox.classList.add('loading');
     lightBoxImg.src = item.img;
     lightBoxTitle.innerText = item.title;
     lightBoxCat.innerText = item.cat === 'book' ? 'Book Cover Design' : 'Graphic Design';
     lightBox.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    lightBoxImg.onload = () => {
+      lightBox.classList.remove('loading');
+    };
   }
+
+  function navigateLightbox(dir) {
+    currentItemIndex += dir;
+    if (currentItemIndex < 0) currentItemIndex = currentFilteredData.length - 1;
+    if (currentItemIndex >= currentFilteredData.length) currentItemIndex = 0;
+    openLightbox(currentItemIndex);
+  }
+
+  document.getElementById('lbox-prev').onclick = (e) => { e.stopPropagation(); navigateLightbox(-1); };
+  document.getElementById('lbox-next').onclick = (e) => { e.stopPropagation(); navigateLightbox(1); };
+
+  document.addEventListener('keydown', (e) => {
+    if (!lightBox.classList.contains('active')) return;
+    if (e.key === 'Escape') lightBoxClose.onclick();
+    if (e.key === 'ArrowLeft') navigateLightbox(-1);
+    if (e.key === 'ArrowRight') navigateLightbox(1);
+  });
 
   lightBoxClose.onclick = () => {
     lightBox.classList.remove('active');
@@ -936,12 +1120,16 @@
   
   function showView(view) {
     if (view === 'graphics') {
+      videoView.classList.remove('view-active');
       videoView.classList.add('view-hidden');
       graphicsView.classList.remove('view-hidden');
+      graphicsView.classList.add('view-active');
       renderGraphics();
     } else {
+      graphicsView.classList.remove('view-active');
       graphicsView.classList.add('view-hidden');
       videoView.classList.remove('view-hidden');
+      videoView.classList.add('view-active');
     }
     window.scrollTo(0, 0);
   }
@@ -958,6 +1146,29 @@
   // Initial load hash check
   if (window.location.hash === '#graphics') showView('graphics');
   else renderGraphics();
+
+  // Contact Form Logic
+  const contactForm = document.getElementById('contactForm');
+  const formSuccess = document.getElementById('formSuccess');
+  const submitBtn = document.getElementById('submitBtn');
+
+  contactForm.onsubmit = (e) => {
+    e.preventDefault();
+    submitBtn.innerText = 'Sending...';
+    submitBtn.disabled = true;
+
+    // Simulate API call
+    setTimeout(() => {
+      formSuccess.classList.add('active');
+      submitBtn.innerText = 'Send Message ↗';
+      submitBtn.disabled = false;
+      contactForm.reset();
+    }, 1500);
+  };
+
+  window.resetForm = () => {
+    formSuccess.classList.remove('active');
+  };
 </script>
 </body>
 </html>
